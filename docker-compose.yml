@@ -1,0 +1,131 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: studentska_baza
+    ports:
+      - "5432:5432"
+    networks:
+      - backend
+
+  eureka:
+    build:
+      context: ./eureka-server
+    container_name: eureka
+    ports:
+      - "8761:8761"
+    networks:
+      - backend
+
+  course-service:
+    build:
+      context: ./course-service
+    container_name: course-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - eureka
+      - postgres
+    networks:
+      - backend
+
+  enrollment-service:
+    build:
+      context: ./enrollment-service
+    container_name: enrollment-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - eureka
+      - course-service
+      - postgres
+    networks:
+      - backend
+
+  user-service:
+    build:
+      context: ./user-service
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/studentska_baza
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+    depends_on:
+      - eureka
+      - postgres
+    networks:
+      - backend
+
+  grade-service:
+    build:
+      context: ./grade-service
+    container_name: grade-service
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - eureka
+      - user-service
+      - enrollment-service
+      - course-service
+    networks:
+      - backend
+
+  notification-service:
+    build:
+      context: ./notification-service
+    container_name: notification-service
+    ports:
+      - "8085:8085"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - eureka
+      - rabbitmq
+    networks:
+      - backend
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672" # za web UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - backend
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - eureka
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge

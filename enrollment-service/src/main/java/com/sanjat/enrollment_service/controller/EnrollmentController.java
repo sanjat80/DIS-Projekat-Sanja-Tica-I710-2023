@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.sanjat.enrollment_service.dtos.ApplicationDto;
 import com.sanjat.enrollment_service.dtos.EnrollmentDto;
+import com.sanjat.enrollment_service.dtos.StatusUpdateDto;
 import com.sanjat.enrollment_service.exception.ApplicationFailedException;
 import com.sanjat.enrollment_service.model.Application;
 import com.sanjat.enrollment_service.model.Enrollment;
@@ -72,6 +73,7 @@ public class EnrollmentController {
         try {
             service.enrollStudent(applicationId);
             return ResponseEntity.ok("Student je uspjesno upisan na kurs.");
+            // TODO: Dodaj handling za rabbit
         } catch (RuntimeException ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());
         }
@@ -139,8 +141,8 @@ public class EnrollmentController {
 
     @PutMapping("/{id}/status")
     public ResponseEntity<Void> updateEnrollmentStatus(@PathVariable("id") Long enrollmentId,
-            @RequestParam("status") Status status) {
-        service.updateStatus(enrollmentId, status);
+            @RequestBody StatusUpdateDto updateRequest) {
+        service.updateStatus(enrollmentId, updateRequest.getStatus());
         return ResponseEntity.noContent().build(); // 204 No Content
     }
 }

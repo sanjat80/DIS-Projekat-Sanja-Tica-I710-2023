@@ -2,6 +2,8 @@ package com.sanjat.grade_service.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import java.time.LocalDate;
@@ -54,32 +56,29 @@ public class GradeServiceTest {
     }
 
     @Test
+
     void giveGrade_ShouldSaveGrade_WhenEnrollmentIsActive() {
-        // Arrange
         when(proxy.getEnrollmentById(1L)).thenReturn(activeEnrollment);
 
         when(proxy.getCourseByEnrollment(1L)).thenReturn("Matematika");
-        when(proxy.getStudentEmailByEnrollmentId(1L)).thenReturn("student@example.com");
+        when(proxy.getStudentEmailByEnrollmentId(1L)).thenReturn(
+                "student@example.com");
         when(repository.save(any(Grade.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        // Act
         Grade result = gradeService.giveGrade(gradeDto);
 
-        // Assert
         assertNotNull(result);
         assertEquals(9, result.getGrade());
         assertEquals(1L, result.getEnrollmentId());
-        verify(proxy).updateEnrollmentStatus(1L, Status.ZAVRSIO);
+        verify(proxy).updateEnrollmentStatus(eq(1L), argThat(dto -> dto.getStatus() == Status.ZAVRSIO));
         verify(notificationSender).sendNotification(any(Notification.class));
     }
 
     @Test
     void giveGrade_ShouldThrowException_WhenEnrollmentNotActive() {
-        // Arrange
         activeEnrollment.setStatus(Status.NIJE_POLOZIO);
         when(proxy.getEnrollmentById(1L)).thenReturn(activeEnrollment);
 
-        // Act & Assert
         assertThrows(
                 IllegalStateException.class,
                 () -> gradeService.giveGrade(gradeDto),
@@ -98,10 +97,8 @@ public class GradeServiceTest {
         when(repository.findByEnrollmentIdIn(List.of(1L, 2L)))
                 .thenReturn(List.of(grade1, grade2));
 
-        // Act
         List<Grade> result = gradeService.getGradesByCourseId(1L);
 
-        // Assert
         assertEquals(2, result.size());
         assertEquals(9, result.get(0).getGrade());
         assertEquals(9, result.get(1).getGrade());
@@ -113,22 +110,18 @@ public class GradeServiceTest {
         when(proxy.getEnrollmentsByStudentId(1L))
                 .thenReturn(List.of(activeEnrollment, inactiveEnrollment));
 
-        // Simuliramo ocjenu samo za aktivan enrollment
         Grade grade = new Grade(1L, 1L, LocalDate.of(2025, 07, 23), 85, 9);
         when(repository.findByEnrollmentIdIn(List.of(1L)))
                 .thenReturn(List.of(grade));
 
-        // Act
         List<Grade> result = gradeService.getGradesByStudentId(1L);
 
-        // Assert
         assertEquals(1, result.size());
         assertEquals(9, result.get(0).getGrade());
     }
 
     @Test
     void updateGrade_ShouldUpdatePointsAndGrade() {
-        // Arrange
         Grade existingGrade = new Grade();
         existingGrade.setGradeId(1L);
         existingGrade.setEnrollmentId(1L);
@@ -141,10 +134,8 @@ public class GradeServiceTest {
         when(repository.findById(1L)).thenReturn(Optional.of(existingGrade));
         when(repository.save(any(Grade.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        // Act
         Grade result = gradeService.updateGrade(1L, updateDto);
 
-        // Assert
         assertEquals(9, result.getGrade());
         assertEquals(90.0, result.getPoints());
     }

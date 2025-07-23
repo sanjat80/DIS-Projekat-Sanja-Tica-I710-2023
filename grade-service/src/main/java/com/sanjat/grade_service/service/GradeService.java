@@ -13,6 +13,7 @@ import com.sanjat.grade_service.dtos.GradeDto;
 import com.sanjat.grade_service.dtos.GradeUpdateDto;
 import com.sanjat.grade_service.dtos.Notification;
 import com.sanjat.grade_service.dtos.NotificationType;
+import com.sanjat.grade_service.dtos.StatusUpdateDto;
 import com.sanjat.grade_service.exception.EntityNotFoundException;
 import com.sanjat.grade_service.exception.ServiceUnavailableException;
 import com.sanjat.grade_service.model.Enrollment;
@@ -51,9 +52,9 @@ public class GradeService {
         grade.setEnrollmentId(gradeRequest.getEnrollmentId());
 
         if (grade.getGrade() >= 6) {
-            proxy.updateEnrollmentStatus(gradeRequest.getEnrollmentId(), Status.ZAVRSIO);
+            proxy.updateEnrollmentStatus(gradeRequest.getEnrollmentId(), new StatusUpdateDto(Status.ZAVRSIO));
         } else {
-            proxy.updateEnrollmentStatus(gradeRequest.getEnrollmentId(), Status.NIJE_POLOZIO);
+            proxy.updateEnrollmentStatus(gradeRequest.getEnrollmentId(), new StatusUpdateDto(Status.NIJE_POLOZIO));
         }
 
         String courseName = proxy.getCourseByEnrollment(gradeRequest.getEnrollmentId());

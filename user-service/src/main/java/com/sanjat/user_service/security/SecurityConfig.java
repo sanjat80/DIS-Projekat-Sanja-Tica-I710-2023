@@ -49,7 +49,9 @@ public class SecurityConfig {
                                 "/users",
                                 "/users/*",
                                 "/user-service/auth/login",
-                                "/user-service/auth/register")
+                                "/user-service/auth/register",
+                                "/actuator/prometheus",
+                                "/metrics")
                         .permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/register/professor")
                         .hasAuthority("ROLE_ADMIN")

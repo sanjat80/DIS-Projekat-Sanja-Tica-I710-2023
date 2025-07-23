@@ -30,6 +30,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         try {
+            String path = request.getRequestURI();
+
+            if (path.equals("/actuator/prometheus") || path.equals("/metrics")) {
+                filterChain.doFilter(request, response);
+                return;
+            }
             String token = extractJwtFromRequest(request);
 
             if (token != null && jwtUtil.validateToken(token)) {

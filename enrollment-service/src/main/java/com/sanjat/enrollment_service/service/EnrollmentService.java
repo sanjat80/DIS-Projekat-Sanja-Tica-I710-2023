@@ -115,23 +115,23 @@ public class EnrollmentService {
     public void enrollStudent(Long applicationId) {
         Application app = appRepository.findById(applicationId)
                 .orElseThrow(() -> new RuntimeException("Prijava nije pronađena"));
-        // 3. Nađi studenta
         var student = userProxy.getUserByEmail(app.getEmail());
         Long studentId = student.getId();
 
-        // 4. Nađi courseId
         Long courseId = courseProxy.getCourseIdByName(app.getCourseName());
 
-        // 5. Koliko puta je student već upisao taj kurs
         int timesEnrolled = repository.countByStudentIdAndCourseId(studentId, courseId);
         String courseName = app.getCourseName();
-        // 6. Kreiraj upis
         Enrollment enrollment = new Enrollment();
         enrollment.setStudentId(studentId);
         enrollment.setCourseId(courseId);
         enrollment.setEnrollmentDate(LocalDate.now());
         enrollment.setNumberOfCourseAttempts(timesEnrolled + 1);
-        enrollment.setStatus(Status.POHADJA);
+        if (enrollment.getNumberOfCourseAttempts() == 2) {
+            enrollment.setStatus(Status.OBNAVLJA);
+        } else {
+            enrollment.setStatus(Status.POHADJA);
+        }
         repository.save(enrollment);
 
         Notification notification = new Notification();

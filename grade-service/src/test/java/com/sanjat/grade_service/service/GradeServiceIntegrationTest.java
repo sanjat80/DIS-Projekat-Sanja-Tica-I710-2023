@@ -96,7 +96,6 @@ public class GradeServiceIntegrationTest {
                                 ]
                                 """)));
 
-        // Add grades to DB
         Grade grade1 = new Grade();
         grade1.setEnrollmentId(1L);
         grade1.setPoints(80.0);

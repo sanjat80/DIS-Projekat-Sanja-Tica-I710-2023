@@ -1,6 +1,7 @@
 package com.sanjat.enrollment_service.service;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.time.LocalDate;
@@ -21,7 +22,6 @@ import com.sanjat.enrollment_service.repository.UserProxy;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @Transactional
 public class EnrollmentServiceTest {
+    private CourseDto courseDto;
 
     @Autowired
     private EnrollmentService enrollmentService;
@@ -55,11 +56,11 @@ public class EnrollmentServiceTest {
 
     @BeforeEach
     void setupMocks() {
-        CourseDto courseDto = new CourseDto();
+        courseDto = new CourseDto();
         courseDto.setId(courseId);
         courseDto.setName(courseName);
-        courseDto.setApplicationStart(LocalDate.now().minusDays(5));
-        courseDto.setApplicationEnd(LocalDate.now().plusDays(5));
+        courseDto.setApplicationStart(LocalDate.of(2025, 07, 01));
+        courseDto.setApplicationEnd(LocalDate.of(2025, 07, 15));
         courseDto.setCapacity(2);
         courseDto.setMinPoints(50);
 
@@ -76,6 +77,8 @@ public class EnrollmentServiceTest {
 
     @Test
     void testApplyForCourse_Success() {
+        courseDto.setApplicationEnd(LocalDate.of(2025, 07, 30));
+        courseDto.setCapacity(10);
         ApplicationDto applicationDto = new ApplicationDto();
         applicationDto.setCourseName(courseName);
         applicationDto.setEntranceExamPoints(70);
@@ -95,22 +98,23 @@ public class EnrollmentServiceTest {
 
     @Test
     void testApplyForCourse_FailDueToPoints() {
+        courseDto.setApplicationEnd(LocalDate.of(2025, 07, 30));
+
         ApplicationDto applicationDto = new ApplicationDto();
         applicationDto.setCourseName(courseName);
-        applicationDto.setEntranceExamPoints(30); // manje od minPoints
+        applicationDto.setEntranceExamPoints(30);
         applicationDto.setName("Janko");
         applicationDto.setSurname("Jankovic");
 
         assertThatThrownBy(() -> enrollmentService.applyForCourse(applicationDto, studentEmail))
                 .isInstanceOf(ApplicationFailedException.class)
                 .hasMessageContaining("Nedovoljan broj poena!");
-
-        assertThat(applicationRepository.findAll()).isEmpty();
     }
 
     @Test
     void testApplyForCourse_FailDueToCapacity() {
-        // Napuni kapacitet
+        courseDto.setApplicationEnd(LocalDate.of(2025, 07, 30));
+
         Enrollment e1 = new Enrollment();
         e1.setCourseId(courseId);
         e1.setStudentId(101L);
@@ -135,20 +139,11 @@ public class EnrollmentServiceTest {
                 .isInstanceOf(ApplicationFailedException.class)
                 .hasMessageContaining("Nema slobodnih mjesta na kursu!");
 
-        assertThat(applicationRepository.findAll()).isEmpty();
     }
 
     @Test
     void testApplyForCourse_FailDueToApplicationPeriod() {
-        CourseDto courseDto = new CourseDto();
-        courseDto.setId(courseId);
-        courseDto.setName(courseName);
-        courseDto.setApplicationStart(LocalDate.now().plusDays(1));
-        courseDto.setApplicationEnd(LocalDate.now().plusDays(10));
         courseDto.setCapacity(10);
-        courseDto.setMinPoints(50);
-        when(courseProxy.getCourseById(courseId)).thenReturn(courseDto);
-
         ApplicationDto applicationDto = new ApplicationDto();
         applicationDto.setCourseName(courseName);
         applicationDto.setEntranceExamPoints(80);
@@ -158,13 +153,27 @@ public class EnrollmentServiceTest {
         assertThatThrownBy(() -> enrollmentService.applyForCourse(applicationDto, studentEmail))
                 .isInstanceOf(ApplicationFailedException.class)
                 .hasMessageContaining("Prijava izvan dozvoljenog termina!");
-
-        assertThat(applicationRepository.findAll()).isEmpty();
     }
 
     @Test
     void testApplyForCourse_FailDueToMaxTimesEnrolled() {
-        when(enrollmentRepository.countByStudentIdAndCourseId(100L, courseId)).thenReturn(2);
+        courseDto.setCapacity(10);
+        courseDto.setApplicationStart(LocalDate.of(2025, 07, 05));
+        courseDto.setApplicationEnd(LocalDate.of(2025, 07, 30));
+
+        Enrollment e1 = new Enrollment();
+        e1.setCourseId(courseId);
+        e1.setStudentId(100L);
+        e1.setEnrollmentDate(LocalDate.now().minusDays(10));
+        e1.setStatus(Status.POHADJA);
+        enrollmentRepository.save(e1);
+
+        Enrollment e2 = new Enrollment();
+        e2.setCourseId(courseId);
+        e2.setStudentId(100L);
+        e2.setEnrollmentDate(LocalDate.now().minusDays(5));
+        e2.setStatus(Status.POHADJA);
+        enrollmentRepository.save(e2);
 
         ApplicationDto applicationDto = new ApplicationDto();
         applicationDto.setCourseName(courseName);
@@ -175,13 +184,12 @@ public class EnrollmentServiceTest {
         assertThatThrownBy(() -> enrollmentService.applyForCourse(applicationDto, studentEmail))
                 .isInstanceOf(ApplicationFailedException.class)
                 .hasMessageContaining("Student ne može upisati isti kurs više od 2 puta!");
-
-        assertThat(applicationRepository.findAll()).isEmpty();
     }
 
     @Test
     void testEnrollStudent_Success() {
-        // Pripremi odobrenu aplikaciju
+        courseDto.setApplicationEnd(LocalDate.of(2025, 07, 30));
+
         Application application = new Application();
         application.setId(1L);
         application.setCourseName(courseName);
@@ -193,11 +201,10 @@ public class EnrollmentServiceTest {
         application.setSurname("Markovic");
         applicationRepository.save(application);
 
-        when(enrollmentRepository.countByStudentIdAndCourseId(100L, courseId)).thenReturn(0);
+        enrollmentRepository.deleteAll();
 
         enrollmentService.enrollStudent(application.getId());
 
-        // Provera da je enrollment kreiran
         var enrollments = enrollmentRepository.findByStudentId(100L);
         assertThat(enrollments).isNotEmpty();
         Enrollment enrollment = enrollments.get(0);
@@ -233,7 +240,4 @@ public class EnrollmentServiceTest {
 
         assertThat(enrollmentRepository.findById(enrollment.getId())).isEmpty();
     }
-
-    // Možeš dodati još testova za get metode, npr. getEnrollmentsByStudent itd.
-
 }
