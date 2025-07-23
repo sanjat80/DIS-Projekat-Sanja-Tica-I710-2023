@@ -1,0 +1,75 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "NotificationServiceApplication",
+            "request": "launch",
+            "mainClass": "com.sanjat.notification_service.NotificationServiceApplication",
+            "projectName": "notification-service"
+        },
+        {
+            "type": "java",
+            "name": "Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "java",
+            "name": "ApiGatewayApplication",
+            "request": "launch",
+            "mainClass": "com.sanjat.api_gateway.ApiGatewayApplication",
+            "projectName": "api-gateway"
+        },
+        {
+            "type": "java",
+            "name": "CourseServiceApplication",
+            "request": "launch",
+            "mainClass": "com.sanjat.course_service.CourseServiceApplication",
+            "projectName": "course-service"
+        },
+        {
+            "type": "java",
+            "name": "EnrollmentServiceApplication",
+            "request": "launch",
+            "mainClass": "com.sanjat.enrollment_service.EnrollmentServiceApplication",
+            "projectName": "enrollment-service"
+        },
+        {
+            "type": "java",
+            "name": "EurekaServerApplication",
+            "request": "launch",
+            "mainClass": "com.sanjat.eureka_server.EurekaServerApplication",
+            "projectName": "eureka-server"
+        },
+        {
+            "type": "java",
+            "name": "GradeServiceApplication",
+            "request": "launch",
+            "mainClass": "com.sanjat.grade_service.GradeServiceApplication",
+            "projectName": "grade-service"
+        },
+        {
+            "type": "java",
+            "name": "UserServiceApplication",
+            "request": "launch",
+            "mainClass": "com.sanjat.user_service.UserServiceApplication",
+            "projectName": "user-service"
+        },
+        {
+            "type": "java",
+            "name": "Debug Grade-Service (Feign Issues)",
+            "request": "launch",
+            "mainClass": "com.sanjat.grade_service.GradeServiceApplication",
+            "projectName": "grade-service",
+            "vmArgs": "-Dspring.profiles.active=dev -Dlogging.level.org.springframework.cloud.openfeign=DEBUG -Dlogging.level.com.sanjat=TRACE",
+            "env": {
+                "SERVER_PORT": "8084",
+                "EUREKA_CLIENT_SERVICEURL_DEFAULTZONE": "http://localhost:8761/eureka"
+            }
+        }
+    ]
+}
