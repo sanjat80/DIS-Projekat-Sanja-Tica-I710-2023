@@ -92,27 +92,22 @@ public class GradeService {
 
     public List<Grade> getGradesByCourseId(Long courseId) {
         try {
-            // 1. Dobijanje enrollments sa dodatnom proverom
             List<Enrollment> enrollments = Optional.ofNullable(proxy.getEnrollmentsForCourse(courseId))
                     .orElse(Collections.emptyList());
 
-            // 2. Filtriranje null vrednosti i pravljenje ID liste
             List<Long> enrollmentIDs = enrollments.stream()
-                    .filter(Objects::nonNull) // filtrira null enrollment objekte
+                    .filter(Objects::nonNull)
                     .map(Enrollment::getId)
-                    .filter(Objects::nonNull) // filtrira null ID-jeve
+                    .filter(Objects::nonNull)
                     .collect(Collectors.toList());
 
-            // 3. Provera da li ima validnih ID-jeva
             if (enrollmentIDs.isEmpty()) {
                 return Collections.emptyList();
             }
 
-            // 4. Poziv repository metode
             return repository.findByEnrollmentIdIn(enrollmentIDs);
 
         } catch (FeignException e) {
-            // Logovanje greške
             System.out.println("Feign error while getting enrollments for course ");
             throw new ServiceUnavailableException("Enrollment service unavailable");
         } catch (Exception e) {
@@ -123,27 +118,29 @@ public class GradeService {
 
     public List<Grade> getGradesByStudentId(Long studentId) {
         List<Enrollment> enrollments = Optional.ofNullable(proxy.getEnrollmentsByStudentId(studentId))
-                .orElse(Collections.emptyList()).stream()
-                .peek(e -> System.out.println("Enrollment status: " + e.getStatus())).collect(Collectors.toList());
+                .orElse(Collections.emptyList());
 
-        // filtriraj po statusu POHADJA i izbacuj null vrednosti
+        System.out.println("All enrollments for student " + studentId + ":");
+        enrollments.forEach(e -> System.out.println("ID: " + e.getId() + ", Status: " + e.getStatus()));
+
         List<Long> enrollmentIDs = enrollments.stream()
                 .filter(Objects::nonNull)
-                .filter(e -> e.getStatus() == Status.POHADJA)
-                .peek(e -> System.out.println("Enrollment status: " + e.getStatus()))
-                .map(e -> {
-                    System.out.println("Enrollment ID: " + e.getId());
-                    return e.getId();
-                })
+                .filter(e -> e.getStatus() == Status.POHADJA) // ili e.getStatus().equals(Status.POHADJA) ako nije enum
+                .map(Enrollment::getId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
-        System.out.println("Enrollment IDs: " + enrollmentIDs);
+
+        System.out.println("Filtered enrollment IDs with status POHADJA: " + enrollmentIDs);
 
         if (enrollmentIDs.isEmpty()) {
+            System.out.println("No enrollments found with status POHADJA.");
             return Collections.emptyList();
         }
-        var grades = repository.findByEnrollmentIdIn(enrollmentIDs);
-        grades.forEach(g -> System.out.println("Grade: " + g));
+
+        List<Grade> grades = repository.findByEnrollmentIdIn(enrollmentIDs);
+
+        System.out.println("Grades found:");
+        grades.forEach(g -> System.out.println(g));
 
         return grades;
     }

@@ -4,9 +4,10 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import com.sanjat.enrollment_service.config.FeignClientConfig;
 import com.sanjat.enrollment_service.dtos.UserDto;
 
-@FeignClient("user-service")
+@FeignClient(name = "user-service", configuration = FeignClientConfig.class)
 public interface UserProxy {
     @GetMapping("/users/username/{username}")
     UserDto findUserByUsername(@PathVariable("username") String username);

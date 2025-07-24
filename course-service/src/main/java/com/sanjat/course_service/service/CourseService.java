@@ -34,7 +34,7 @@ public class CourseService {
         repository.deleteById(id);
     }
 
-    public boolean hasVacancy(Long courseId, int currentEnrolled) {
+    public boolean hasCapacity(Long courseId, int currentEnrolled) {
         Optional<Course> courseOpt = repository.findById(courseId);
         if (courseOpt.isEmpty())
             return false;

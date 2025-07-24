@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'java-microservices'
+    static_configs:
+      - targets:
+          - 'user-service:8081'
+          - 'course-service:8082'
+          - 'enrollment-service:8083'
+          - 'grade-service:8084'

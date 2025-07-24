@@ -31,36 +31,19 @@ public class GradeController {
         this.service = service;
     }
 
-    /*
-     * @PostMapping
-     * public ResponseEntity<Grade> createGrade(@RequestBody GradeDto dto) {
-     * Grade createdGrade = service.giveGrade(dto);
-     * return new ResponseEntity<>(createdGrade, HttpStatus.CREATED);
-     * }
-     */
     @PostMapping
     public ResponseEntity<?> createGrade(@RequestBody GradeDto grade) {
-        // try {
-        Grade createdGrade = service.giveGrade(grade);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdGrade);
-        /*
-         * } catch (FeignException.NotFound ex) {
-         * return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-         * .body(Map.of(
-         * "error", "Invalid enrollment reference",
-         * "details", "The referenced enrollment does not exist"));
-         * } catch (FeignException ex) {
-         * return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-         * .body(Map.of(
-         * "error", "Enrollment service unavailable",
-         * "details", "Could not communicate with enrollment service"));
-         * } catch (Exception ex) {
-         * return ResponseEntity.internalServerError()
-         * .body(Map.of(
-         * "error", "Internal server error",
-         * "message", ex.getMessage()));
-         * }
-         */
+        try {
+            Grade createdGrade = service.giveGrade(grade);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdGrade);
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ex.getMessage());
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska prilikom kreiranja ocjene za upis na kurs: " + grade.getEnrollmentId() + ". Greska: "
+                            + ex.getMessage());
+        }
     }
 
     @PutMapping("/{id}")
@@ -88,7 +71,8 @@ public class GradeController {
         } catch (FeignException.NotFound ex) {
             return ResponseEntity.notFound().build();
         } catch (Exception ex) {
-            return ResponseEntity.internalServerError().body("Error retrieving grades");
+            return ResponseEntity.internalServerError()
+                    .body("Greska pri dohvatanju ocjena za kurs: " + courseId + ". Greska: " + ex.getMessage());
         }
     }
 
@@ -103,7 +87,8 @@ public class GradeController {
         } catch (FeignException.NotFound ex) {
             return ResponseEntity.notFound().build();
         } catch (Exception ex) {
-            return ResponseEntity.internalServerError().body("Error retrieving student grades");
+            return ResponseEntity.internalServerError()
+                    .body("Greska pri dohvatanju ocjena: " + studentId + ". Greska: " + ex.getMessage());
         }
     }
 
@@ -115,7 +100,7 @@ public class GradeController {
                     ? ResponseEntity.noContent().build()
                     : ResponseEntity.ok(grades);
         } catch (Exception ex) {
-            return ResponseEntity.internalServerError().body("Error retrieving student grades");
+            return ResponseEntity.internalServerError().body("Greska pri dohvatanju svih ocjena studenata");
         }
     }
 

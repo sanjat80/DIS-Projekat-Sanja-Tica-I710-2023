@@ -1,8 +1,10 @@
 package com.sanjat.user_service.security;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,6 +18,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    @Value("${service.auth.token}")
+    private String serviceAuthToken;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -30,12 +34,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         try {
+            List<String> excludedPaths = List.of("/auth/login", "/auth/register", "/users");
+
             String path = request.getRequestURI();
+
+            if (excludedPaths.contains(path)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
 
             if (path.equals("/actuator/prometheus") || path.equals("/metrics")) {
                 filterChain.doFilter(request, response);
                 return;
             }
+
+            String authToken = request.getHeader("X-Service-Auth");
+
+            System.out.println(authToken);
+            if (authToken == null || !authToken.equals(serviceAuthToken)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Unauthorized - invalid service auth token");
+                return;
+            }
+
             String token = extractJwtFromRequest(request);
 
             if (token != null && jwtUtil.validateToken(token)) {
@@ -52,6 +73,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
+
+            filterChain.doFilter(request, response);
+
         } catch (Exception e) {
 
             logger.error("Cannot set user authentication: {}", e);

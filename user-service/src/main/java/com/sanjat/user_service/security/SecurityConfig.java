@@ -46,8 +46,8 @@ public class SecurityConfig {
                                 "/users/id/*",
                                 "/users/username/*",
                                 "/users/email/**",
-                                "/users",
                                 "/users/*",
+                                "/users",
                                 "/user-service/auth/login",
                                 "/user-service/auth/register",
                                 "/actuator/prometheus",
@@ -66,5 +66,10 @@ public class SecurityConfig {
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
         return new JwtAuthenticationFilter();
+    }
+
+    @Bean
+    public ServiceAuthFilter serviceAuthFilter() {
+        return new ServiceAuthFilter();
     }
 }

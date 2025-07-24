@@ -1,0 +1,44 @@
+name: Docker CI (Dev/Main)
+
+on:
+  push:
+    branches: [main, develop]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Start dependencies
+        run: docker-compose up -d postgres rabbitmq
+
+      - name: Build
+        run: |
+          ./mvnw clean package -DskipTests=${{ github.ref != 'refs/heads/main' }}
+          docker-compose build
+
+      - name: Run services
+        run: |
+          docker-compose up -d
+          sleep 30
+
+      - name: Run tests (only on main)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          ./mvnw test
+
+      - name: Quick health check
+        run: curl -sSf http://localhost:8080/actuator/health
+
+      - name: Cleanup
+        if: always()
+        run: docker-compose down

@@ -82,7 +82,7 @@ public class CourseServiceTest {
         course.setCapacity(30);
         when(repository.findById(1L)).thenReturn(Optional.of(course));
 
-        boolean result = service.hasVacancy(1L, 20);
+        boolean result = service.hasCapacity(1L, 20);
 
         assertTrue(result);
     }
@@ -93,7 +93,7 @@ public class CourseServiceTest {
         course.setCapacity(20);
         when(repository.findById(1L)).thenReturn(Optional.of(course));
 
-        boolean result = service.hasVacancy(1L, 25);
+        boolean result = service.hasCapacity(1L, 25);
 
         assertFalse(result);
     }
@@ -102,7 +102,7 @@ public class CourseServiceTest {
     void testHasVacancyCourseNotFound() {
         when(repository.findById(2L)).thenReturn(Optional.empty());
 
-        boolean result = service.hasVacancy(2L, 5);
+        boolean result = service.hasCapacity(2L, 5);
 
         assertFalse(result);
     }

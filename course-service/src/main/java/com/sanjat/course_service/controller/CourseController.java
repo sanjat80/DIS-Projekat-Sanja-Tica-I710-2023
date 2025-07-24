@@ -27,79 +27,156 @@ public class CourseController {
     }
 
     @GetMapping
-    public List<Course> getAllCourses() {
-        return service.findAll();
+    public ResponseEntity<List<Course>> getAllCourses() {
+        try {
+            return ResponseEntity.ok(service.findAll());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
+        }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Course> getCourseById(@PathVariable Long id) {
-        return service.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<?> getCourseById(@PathVariable Long id) {
+        ResponseEntity<?> response;
+
+        try {
+            Course course = service.findById(id).orElse(null);
+            if (course == null) {
+                response = ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Kurs sa id-em: " + id + " nije pronadjen.");
+            } else {
+                response = ResponseEntity.ok(course);
+            }
+        } catch (Exception e) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Desila se greska prilikom dohvatanja kursa.");
+        }
+
+        return response;
     }
 
     @PostMapping
-    public Course createCourse(@RequestBody Course course) {
-        return service.save(course);
+    public ResponseEntity<?> createCourse(@RequestBody Course course) {
+        try {
+            Course saved = service.save(course);
+            return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Greska pri kreiranju kursa: " + e.getMessage());
+        }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Course> updateCourse(@PathVariable Long id, @RequestBody Course courseDetails) {
-        return service.findById(id)
-                .map(course -> {
-                    course.setName(courseDetails.getName());
-                    course.setDescription(courseDetails.getDescription());
-                    course.setApplicationEnd(courseDetails.getApplicationEnd());
-                    course.setApplicationStart(courseDetails.getApplicationStart());
-                    course.setCapacity(courseDetails.getCapacity());
-                    course.setDurationInClasses(courseDetails.getDurationInClasses());
-                    course.setEspb_Points(courseDetails.getEspb_Points());
-                    course.setMinPoints(courseDetails.getMinPoints());
-                    course.setProfessor(courseDetails.getProfessor());
-                    course.setSemester(courseDetails.getSemester());
-                    return ResponseEntity.ok(service.save(course));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<?> updateCourse(@PathVariable Long id, @RequestBody Course courseDetails) {
+        ResponseEntity<?> response;
+
+        try {
+            Course existing = service.findById(id).orElse(null);
+            if (existing == null) {
+                response = ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Kurs sa id-em: " + id + " nije pronadjen.");
+            } else {
+                existing.setName(courseDetails.getName());
+                existing.setDescription(courseDetails.getDescription());
+                existing.setApplicationEnd(courseDetails.getApplicationEnd());
+                existing.setApplicationStart(courseDetails.getApplicationStart());
+                existing.setCapacity(courseDetails.getCapacity());
+                existing.setDurationInClasses(courseDetails.getDurationInClasses());
+                existing.setEspb_Points(courseDetails.getEspb_Points());
+                existing.setMinPoints(courseDetails.getMinPoints());
+                existing.setProfessor(courseDetails.getProfessor());
+                existing.setSemester(courseDetails.getSemester());
+
+                Course updated = service.save(existing);
+                response = ResponseEntity.ok(updated);
+            }
+        } catch (Exception e) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska prilikom azuriranja kursa: " + e.getMessage());
+        }
+
+        return response;
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCourse(@PathVariable Long id) {
-        if (service.findById(id).isPresent()) {
-            service.deleteById(id);
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.notFound().build();
-    }
+    public ResponseEntity<?> deleteCourse(@PathVariable Long id) {
+        ResponseEntity<?> response;
 
-    // this endpoint is being used by enrollment service
-    @GetMapping("/open-applications")
-    public ResponseEntity<List<Course>> getCoursesWithOpenApplications() {
-        List<Course> openCourses = service.findAllWithOpenApplicationPeriod();
-        return ResponseEntity.ok(openCourses);
-    }
-
-    // this endpoint is being used by enrollment service
-    @GetMapping("/{id}/has-vacancy")
-    public ResponseEntity<Boolean> hasVacancy(@PathVariable Long id, @RequestParam int currentEnrolled) {
-        boolean vacancy = service.hasVacancy(id, currentEnrolled);
-        return ResponseEntity.ok(vacancy);
-    }
-
-    // this endpoint is being used by enrollment service
-    @GetMapping("/{id}/min-points")
-    public ResponseEntity<Boolean> hasMinimumPoints(@PathVariable Long id, @RequestParam int points) {
-        boolean hasMin = service.hasMinimumPoints(id, points);
-        return ResponseEntity.ok(hasMin);
-    }
-
-    // this endpoint is being used by enrollment service
-    @GetMapping("/id")
-    public ResponseEntity<Long> getCourseIdByName(@RequestParam String name) {
         try {
-            Long courseId = service.getCourseIdByName(name);
-            return ResponseEntity.ok(courseId);
-        } catch (RuntimeException ex) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            Course course = service.findById(id).orElse(null);
+            if (course == null) {
+                response = ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Kurs sa id-em:  " + id + " nije pronadjen.");
+            } else {
+                service.deleteById(id);
+                response = ResponseEntity.noContent().build();
+            }
+        } catch (Exception e) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska pri brisanju kursa: " + e.getMessage());
         }
+
+        return response;
     }
+
+    // this endpoint is being used by enrollment service
+    @GetMapping("/internal/open-applications")
+    public ResponseEntity<?> getCoursesWithOpenApplications() {
+        ResponseEntity<?> response;
+
+        try {
+            List<Course> openCourses = service.findAllWithOpenApplicationPeriod();
+            response = ResponseEntity.ok(openCourses);
+        } catch (Exception e) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska pri dohvatanju kurseva: " + e.getMessage());
+        }
+
+        return response;
+    }
+
+    // this endpoint is being used by enrollment service
+    @GetMapping("/internal/{id}/has-capacity")
+    public ResponseEntity<?> hasCapacity(@PathVariable Long id, @RequestParam int currentEnrolled) {
+        ResponseEntity<?> response;
+
+        try {
+            boolean vacancy = service.hasCapacity(id, currentEnrolled);
+            response = ResponseEntity.ok(vacancy);
+        } catch (Exception e) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska pri provjeravanju kapaciteta : " + e.getMessage());
+        }
+
+        return response;
+    }
+
+    // this endpoint is being used by enrollment service
+    @GetMapping("/internal/{id}/min-points")
+    public ResponseEntity<?> hasMinimumPoints(@PathVariable Long id, @RequestParam int points) {
+        ResponseEntity<?> response;
+
+        try {
+            boolean hasMin = service.hasMinimumPoints(id, points);
+            response = ResponseEntity.ok(hasMin);
+        } catch (Exception e) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska pri provjeravanju minimalnog broja poena: " + e.getMessage());
+        }
+
+        return response;
+    }
+
+    // this endpoint is being used by enrollment service
+    @GetMapping("/internal/id")
+    public ResponseEntity<?> getCourseIdByName(@RequestParam String name) {
+        Long courseId = service.getCourseIdByName(name);
+        if (courseId == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Kurs: '" + name + "' nije pronadjen.");
+        }
+        return ResponseEntity.ok(courseId);
+    }
+
 }

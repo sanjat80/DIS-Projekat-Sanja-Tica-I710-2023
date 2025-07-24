@@ -2,11 +2,10 @@ package com.sanjat.enrollment_service.controller;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.amqp.AmqpException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sanjat.enrollment_service.dtos.ApplicationDto;
@@ -15,7 +14,6 @@ import com.sanjat.enrollment_service.dtos.StatusUpdateDto;
 import com.sanjat.enrollment_service.exception.ApplicationFailedException;
 import com.sanjat.enrollment_service.model.Application;
 import com.sanjat.enrollment_service.model.Enrollment;
-import com.sanjat.enrollment_service.model.Status;
 import com.sanjat.enrollment_service.service.ApplicationService;
 import com.sanjat.enrollment_service.service.EnrollmentService;
 
@@ -39,110 +37,204 @@ public class EnrollmentController {
     }
 
     @GetMapping("/applications")
-    public ResponseEntity<List<Application>> getAllApplication() {
-        return ResponseEntity.ok(appService.getAllAplications());
+    public ResponseEntity<?> getAllApplication() {
+        ResponseEntity<?> response;
+        try {
+            List<Application> applications = appService.getAllAplications();
+            response = ResponseEntity.ok(applications);
+        } catch (Exception e) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska pri dohvatanju svih prijava: " + e.getMessage());
+        }
+        return response;
     }
 
     // this method is being used by grade-service
-    @GetMapping("/{id}")
-    public ResponseEntity<Enrollment> getEnrollmentById(@PathVariable Long id) {
-        return ResponseEntity.ok(service.getEnrollmentById(id));
+    @GetMapping("/internal/{id}")
+    public ResponseEntity<?> getEnrollmentById(@PathVariable Long id) {
+        ResponseEntity<?> response;
+        try {
+            Enrollment enrollment = service.getEnrollmentById(id);
+            if (enrollment == null) {
+                response = ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Upis na kurs sa id-em: " + id + " nije pronadjen.");
+            } else {
+                response = ResponseEntity.ok(enrollment);
+            }
+        } catch (Exception e) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska pri dohvatanju upisa na kurs:  " + e.getMessage());
+        }
+        return response;
     }
 
     @GetMapping
-    public ResponseEntity<List<Enrollment>> getAllEnrollments() {
-        return ResponseEntity.ok(service.GetAllEnrolments());
+    public ResponseEntity<?> getAllEnrollments() {
+        ResponseEntity<?> response;
+        try {
+            List<Enrollment> enrollments = service.GetAllEnrolments();
+            response = ResponseEntity.ok(enrollments);
+        } catch (Exception e) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska pri dohvatanju svih upisa na kurs: " + e.getMessage());
+        }
+        return response;
     }
 
     @PostMapping("/apply")
-    public ResponseEntity<Application> apply(@RequestBody ApplicationDto applicationRequest) {
+    public ResponseEntity<?> apply(@RequestBody ApplicationDto applicationRequest) {
+        ResponseEntity<?> response;
         try {
             Application application = service.applyForCourse(applicationRequest, applicationRequest.getEmail());
-            return ResponseEntity.ok(application);
+            response = ResponseEntity.ok(application);
         } catch (ApplicationFailedException ex) {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(null);
-        } catch (RuntimeException ex) {
-            throw new ApplicationFailedException(ex.getMessage());
+            response = ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
         }
+        // } catch (RuntimeException ex) {
+        // response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        // .body("Prijava na kurs neuspjesna: " + ex.getMessage());
+        // }
+        return response;
     }
 
     @PostMapping("/enroll/{applicationId}")
-    public ResponseEntity<String> enrollStudent(@PathVariable Long applicationId) {
+    public ResponseEntity<?> enrollStudent(@PathVariable Long applicationId) {
+        ResponseEntity<?> response;
         try {
             service.enrollStudent(applicationId);
-            return ResponseEntity.ok("Student je uspjesno upisan na kurs.");
-            // TODO: Dodaj handling za rabbit
-        } catch (RuntimeException ex) {
-            return ResponseEntity.badRequest().body(ex.getMessage());
+            response = ResponseEntity.ok("Student je uspješno upisan na kurs.");
+        } catch (Exception ex) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska prilikom upisivanja studenta: " + ex.getMessage());
         }
+        return response;
     }
 
     @GetMapping("/student/{studentId}")
-    public ResponseEntity<List<EnrollmentDto>> getStudentEnrollments(
-            @PathVariable Long studentId) {
-        List<EnrollmentDto> dtos = service.getEnrollmentsForStudent(studentId);
-        return ResponseEntity.ok(dtos);
+    public ResponseEntity<?> getStudentEnrollments(@PathVariable Long studentId) {
+        ResponseEntity<?> response;
+        try {
+            List<EnrollmentDto> dtos = service.getEnrollmentsForStudent(studentId);
+            response = ResponseEntity.ok(dtos);
+        } catch (Exception e) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska pri dohvatanju upisa na kurs za studenta: " + studentId + "Greska: "
+                            + e.getMessage());
+        }
+        return response;
     }
 
-    // this method is being used by grade-service
-    @GetMapping("/students/{studentId}")
-    public ResponseEntity<List<Enrollment>> getEnrollmentsByStudentId(@PathVariable Long studentId) {
-        return ResponseEntity.ok(service.getEnrollmentsByStudentId(studentId));
+    @GetMapping("/internal/students/{studentId}")
+    public ResponseEntity<?> getEnrollmentsByStudentId(@PathVariable Long studentId) {
+        ResponseEntity<?> response;
+        try {
+            List<Enrollment> enrollments = service.getEnrollmentsByStudentId(studentId);
+            response = ResponseEntity.ok(enrollments);
+        } catch (Exception e) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska pri dohvatanju upisa na kurs za studenta sa id-em: " + studentId + ". Greska: "
+                            + e.getMessage());
+        }
+        return response;
     }
 
     @DeleteMapping("/{enrollmentId}")
-    public ResponseEntity<Void> deleteEnrollment(@PathVariable Long enrollmentId) {
-        service.deleteEnrollment(enrollmentId);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> deleteEnrollment(@PathVariable Long enrollmentId) {
+        ResponseEntity<?> response;
+        try {
+            service.deleteEnrollment(enrollmentId);
+            response = ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska pri brisanju upisa na kurs: " + e.getMessage());
+        }
+        return response;
     }
 
-    // this method is being used by enrollment-service
-    @GetMapping("/course/{courseId}")
-    public ResponseEntity<List<Enrollment>> getEnrollmentsForCourse(@PathVariable Long courseId) {
-        List<Enrollment> enrollments = service.getEnrollmentsByCourseId(courseId);
-        if (enrollments.isEmpty()) {
-            return ResponseEntity.noContent().build();
+    // this method is being used by grade-service
+    @GetMapping("/internal/course/{courseId}")
+    public ResponseEntity<?> getEnrollmentsForCourse(@PathVariable Long courseId) {
+        ResponseEntity<?> response;
+        try {
+            List<Enrollment> enrollments = service.getEnrollmentsByCourseId(courseId);
+            if (enrollments.isEmpty()) {
+                response = ResponseEntity.noContent().build();
+            } else {
+                response = ResponseEntity.ok(enrollments);
+            }
+        } catch (Exception e) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska pri brisanju upisa na kurs sa id-em: " + courseId + ". Greska: " + e.getMessage());
         }
-        return ResponseEntity.ok(enrollments);
+        return response;
     }
 
     @GetMapping("/enrollment/{studentId}/{courseId}")
-    public ResponseEntity<Enrollment> getEnrollmentByStudentAndCourse(@PathVariable Long studentId,
+    public ResponseEntity<?> getEnrollmentByStudentAndCourse(@PathVariable Long studentId,
             @PathVariable Long courseId) {
-        Enrollment enrollment = service.getEnrollmentByStudentAndCourse(studentId, courseId);
-        if (enrollment == null) {
-            return ResponseEntity.noContent().build();
+        ResponseEntity<?> response;
+        try {
+            Enrollment enrollment = service.getEnrollmentByStudentAndCourse(studentId, courseId);
+            if (enrollment == null) {
+                response = ResponseEntity.noContent().build();
+            } else {
+                response = ResponseEntity.ok(enrollment);
+            }
+        } catch (Exception e) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska pri dohvatanju upisa po studentu i kursu: " + e.getMessage());
         }
-        return ResponseEntity.ok(enrollment);
-
+        return response;
     }
 
     // this method is being used by grade-service
-    @GetMapping("/email/{enrollmentId}")
-    public ResponseEntity<String> getStudentEmailByEnrollmentId(@PathVariable Long enrollmentId) {
-        String email = service.getStudentEmailByEnrollmentId(enrollmentId);
-        if (email == null) {
-            return ResponseEntity.noContent().build();
+    @GetMapping("/internal/email/{enrollmentId}")
+    public ResponseEntity<?> getStudentEmailByEnrollmentId(@PathVariable Long enrollmentId) {
+        ResponseEntity<?> response;
+        try {
+            String email = service.getStudentEmailByEnrollmentId(enrollmentId);
+            if (email == null) {
+                response = ResponseEntity.noContent().build();
+            } else {
+                response = ResponseEntity.ok(email);
+            }
+        } catch (Exception e) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska pri dohvatanju studentskog mejla: " + e.getMessage());
         }
-        return ResponseEntity.ok(email);
+        return response;
     }
 
     // this method is being used by grade-service
-    @GetMapping("/course/name/{enrollmentId}")
-    public ResponseEntity<String> getCourseByEnrollment(@PathVariable Long enrollmentId) {
-        String course = service.getCourseByEnrollment(enrollmentId);
-        if (course == null) {
-            return ResponseEntity.noContent().build();
+    @GetMapping("/internal/course/name/{enrollmentId}")
+    public ResponseEntity<?> getCourseByEnrollment(@PathVariable Long enrollmentId) {
+        ResponseEntity<?> response;
+        try {
+            String course = service.getCourseByEnrollment(enrollmentId);
+            if (course == null) {
+                response = ResponseEntity.noContent().build();
+            } else {
+                response = ResponseEntity.ok(course);
+            }
+        } catch (Exception e) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska pri dohvatanju kursa na koji se odnosi upis sa id-em: " + enrollmentId + ". Greska: "
+                            + e.getMessage());
         }
-        return ResponseEntity.ok(course);
+        return response;
     }
 
-    @PutMapping("/{id}/status")
-    public ResponseEntity<Void> updateEnrollmentStatus(@PathVariable("id") Long enrollmentId,
+    @PutMapping("/internal/{id}/status")
+    public ResponseEntity<?> updateEnrollmentStatus(@PathVariable("id") Long enrollmentId,
             @RequestBody StatusUpdateDto updateRequest) {
-        service.updateStatus(enrollmentId, updateRequest.getStatus());
-        return ResponseEntity.noContent().build(); // 204 No Content
+        ResponseEntity<?> response;
+        try {
+            service.updateStatus(enrollmentId, updateRequest.getStatus());
+            response = ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Greska pri azuriranju upisa: " + e.getMessage());
+        }
+        return response;
     }
 }

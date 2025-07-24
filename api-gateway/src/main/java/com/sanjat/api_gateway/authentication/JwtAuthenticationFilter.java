@@ -38,7 +38,7 @@ public class JwtAuthenticationFilter implements WebFilter {
         System.out.println("Incoming path: " + path);
 
         if (path.equals("/user-service/auth/login") ||
-                path.equals("/user-service/auth/register")) {
+                path.equals("/user-service/auth/register") || path.startsWith("/actuator/prometheus")) {
             return chain.filter(exchange);
         }
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
@@ -60,7 +60,7 @@ public class JwtAuthenticationFilter implements WebFilter {
             List<String> roles = claims.get("roles", List.class);
 
             List<GrantedAuthority> authorities = roles.stream()
-                    .map(SimpleGrantedAuthority::new) // koristi ih direktno, ne dodaj ROLE_ opet
+                    .map(SimpleGrantedAuthority::new)
                     .collect(Collectors.toList());
 
             Authentication auth = new UsernamePasswordAuthenticationToken(
@@ -82,7 +82,6 @@ public class JwtAuthenticationFilter implements WebFilter {
                 .parseClaimsJws(token)
                 .getBody();
 
-        // Pretpostavljamo da su role spremljene pod ključem "roles" kao lista stringova
         return claims.get("roles", List.class);
     }
 }

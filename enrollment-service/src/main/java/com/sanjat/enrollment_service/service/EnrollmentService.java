@@ -165,7 +165,7 @@ public class EnrollmentService {
 
     public void deleteEnrollment(Long enrollmentId) {
         Enrollment enrollment = repository.findById(enrollmentId)
-                .orElseThrow(() -> new RuntimeException("Enrollment not found with id: " + enrollmentId));
+                .orElseThrow(() -> new RuntimeException("Nije pronadjen upis sa datim id-em: " + enrollmentId));
         repository.delete(enrollment);
     }
 
@@ -180,7 +180,7 @@ public class EnrollmentService {
 
     public Enrollment getEnrollmentById(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Enrollment with id " + id + " not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Upis sa id-em:  " + id + " nije pronadjen."));
     }
 
     public String getStudentEmailByEnrollmentId(Long enrollmentId) {
